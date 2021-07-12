@@ -122,6 +122,7 @@ def summarize_episodes(
     new_episodes, _ = _partition(new_episodes)
 
     episode_rewards = []
+    num_episodes = len(episodes)
     episode_lengths = []
     policy_rewards = collections.defaultdict(list)
     custom_metrics = collections.defaultdict(list)
@@ -171,6 +172,21 @@ def summarize_episodes(
         # Show as histogram distributions.
         hist_stats["policy_{}_reward".format(policy_id)] = rewards
 
+    # Compute win ratio for first team
+    num_agents = len(custom_metrics)
+    num_first_wins = 0
+    for episode_num in range(num_episodes):
+        episode_rewards = []
+        for agent_id in range(num_agents):
+            episode_rewards.append(custom_metrics[str(agent_id)][episode_num])
+        winner_id = np.argmax(episode_rewards)
+        if winner_id < num_agents // 2:
+            num_first_wins += 1
+    if num_episodes > 0:
+        win_ratio = num_first_wins / num_episodes
+    else:
+        win_ratio = float("nan")
+
     for k, v_list in custom_metrics.copy().items():
         filt = [v for v in v_list if not np.any(np.isnan(v))]
         custom_metrics[k + "_mean"] = np.mean(filt)
@@ -208,7 +224,8 @@ def summarize_episodes(
         custom_metrics=dict(custom_metrics),
         hist_stats=dict(hist_stats),
         sampler_perf=dict(perf_stats),
-        off_policy_estimator=dict(estimators))
+        off_policy_estimator=dict(estimators),
+        win_ratio=win_ratio)
 
 
 def _partition(episodes: List[RolloutMetrics]
